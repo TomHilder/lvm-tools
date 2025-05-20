@@ -5,12 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-import astropy.units as u
+import astropy.units as u  # type: ignore[import]
 import dask.array as da
 import numpy as np
-from astropy.io import fits
-from astropy.io.fits import FITS_rec, HDUList
-from astropy.units import Unit
+from astropy.io import fits  # type: ignore[import]
+from astropy.io.fits import FITS_rec, HDUList  # type: ignore[import]
+from astropy.units import Unit  # type: ignore[import]
 from numpy.typing import NDArray
 from xarray import Dataset
 
@@ -97,20 +97,20 @@ class LVMTile:
         return cls(data=data, meta=meta)
 
     @staticmethod
-    def get_science_data(drp_hdulist: HDUList) -> tuple[tuple[da.Array], tuple[NDArray]]:
+    def get_science_data(drp_hdulist: HDUList) -> tuple[tuple, tuple]:
         slitmap = drp_hdulist[-1].data
         science_inds = get_science_inds(slitmap)
         # Lazily load cubes
-        flux = daskify_native(drp_hdulist[1].data, CHUNKSIZE)[science_inds, :]
-        i_var = daskify_native(drp_hdulist[2].data, CHUNKSIZE)[science_inds, :]
-        mask = daskify_native(drp_hdulist[3].data, CHUNKSIZE)[science_inds, :]
-        lsf = daskify_native(drp_hdulist[5].data, CHUNKSIZE)[science_inds, :]
+        flux: da.Array = daskify_native(drp_hdulist[1].data, CHUNKSIZE)[science_inds, :]
+        i_var: da.Array = daskify_native(drp_hdulist[2].data, CHUNKSIZE)[science_inds, :]
+        mask: da.Array = daskify_native(drp_hdulist[3].data, CHUNKSIZE)[science_inds, :]
+        lsf: da.Array = daskify_native(drp_hdulist[5].data, CHUNKSIZE)[science_inds, :]
         # Eagerly coordinates
-        wave = numpyfy_native(drp_hdulist[4].data)
-        ra = numpyfy_native((slitmap["ra"])[science_inds])
-        dec = numpyfy_native((slitmap["dec"])[science_inds])
-        fibre_id = numpyfy_native((slitmap["fiberid"])[science_inds])
-        fibre_status = numpyfy_native((slitmap["fibstatus"])[science_inds])
+        wave: NDArray = numpyfy_native(drp_hdulist[4].data)
+        ra: NDArray = numpyfy_native((slitmap["ra"])[science_inds])
+        dec: NDArray = numpyfy_native((slitmap["dec"])[science_inds])
+        fibre_id: NDArray = numpyfy_native((slitmap["fiberid"])[science_inds])
+        fibre_status: NDArray = numpyfy_native((slitmap["fibstatus"])[science_inds])
         return (flux, i_var, mask, lsf), (wave, ra, dec, fibre_id, fibre_status)
 
     @staticmethod
