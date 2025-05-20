@@ -1,5 +1,5 @@
-from lvm_lib.tile import Tile
+from lvm_lib.tile import LVMTile
 
 __all__ = [
-    "Tile",
+    "LVMTile",
 ]

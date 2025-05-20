@@ -3,6 +3,7 @@
 
 from dataclasses import dataclass
 
+import astropy.units as unit
 import numpy as np
 from numpy.typing import NDArray
 
@@ -38,8 +39,9 @@ class FitData:
     def __post_init__(self):
         # Brainstorm of checks:
         # - Check the units are correct
+        # - Check the wavelengths are the same in all tiles
         # - Check the shapes are correct (between attributes and between tiles)
-        pass
+        
 
     @property
     def tile_ids(self) -> list[int]:
