@@ -24,7 +24,6 @@ FWHM_TO_SIGMA: float = 1.0 / SIGMA_TO_FWHM
 FLUX_UNIT: Unit = u.erg * u.cm**-2 * u.s**-1 * u.angstrom**-1
 SPECTRAL_UNIT: Unit = u.angstrom
 SPATIAL_UNIT: Unit = u.degree
-WAVELENGTH_UNIT: Unit = u.angstrom
 
 # Default chunk size for Dask arrays
 CHUNKSIZE: str = "auto"
@@ -78,7 +77,7 @@ class LVMTile:
                 # Main dimensions/coordinates
                 "tile": ("tile", [tile_id]),
                 "spaxel": ("spaxel", np.arange(len(fibre_id))),
-                "wavelength": ("wavelength", wave, {"units": str(WAVELENGTH_UNIT)}),
+                "wavelength": ("wavelength", wave, {"units": str(SPECTRAL_UNIT)}),
                 # More coordinates
                 "ra": (spaxel_dims, ra[None, :], {"units": str(SPATIAL_UNIT)}),
                 "dec": (spaxel_dims, dec[None, :], {"units": str(SPATIAL_UNIT)}),
