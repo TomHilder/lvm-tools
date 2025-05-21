@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Mapping
 
 import astropy.units as u  # type: ignore[import]
 import dask.array as da
@@ -12,9 +13,9 @@ from astropy.io import fits  # type: ignore[import]
 from astropy.io.fits import FITS_rec, HDUList  # type: ignore[import]
 from astropy.units import Unit  # type: ignore[import]
 from numpy.typing import NDArray
-from xarray import Dataset
+from xarray import Dataset, concat
 
-from lvm_lib.helper import daskify_native, numpyfy_native
+from lvm_lib.helper import daskify_native, numpyfy_native, summarize_with_units
 
 # Conversions between FWHM and Gaussian sigma
 SIGMA_TO_FWHM: float = 2.0 * np.sqrt(2.0 * np.log(2))
@@ -75,7 +76,7 @@ class LVMTile:
             },
             coords={
                 # Main dimensions/coordinates
-                "tile": ("tile", [tile_id]),
+                "tile": ("tile", [exp_num]),
                 "spaxel": ("spaxel", np.arange(len(fibre_id))),
                 "wavelength": ("wavelength", wave, {"units": str(SPECTRAL_UNIT)}),
                 # More coordinates
@@ -96,6 +97,14 @@ class LVMTile:
 
         return cls(data=data, meta=meta)
 
+    def __repr__(self) -> str:
+        prefix = f"LVMTile ({hex(id(self))}):"
+        prefix += f"\n    Filename:        {self.meta.filename}"
+        prefix += f"\n    Exposure:        {self.meta.exp_num}"
+        prefix += f"\n    DRP version:     {self.meta.drp_ver}"
+        prefix += f"\n    Tile ID:         {self.meta.tile_id}"
+        return f"{prefix}\n{summarize_with_units(self.data)}"
+
     @staticmethod
     def get_science_data(drp_hdulist: HDUList) -> tuple[tuple, tuple]:
         slitmap = drp_hdulist[-1].data
@@ -115,7 +124,37 @@ class LVMTile:
 
     @staticmethod
     def get_metadata(drp_hdulist: HDUList) -> tuple[int, int, str]:
-        tile_id = int(drp_hdulist[0].header["OBJECT"].split("=")[1])
+        try:
+            tile_id = int(drp_hdulist[0].header["OBJECT"].split("=")[1])
+        except IndexError:
+            try:
+                tile_id = int(drp_hdulist[0].header["OBJECT"])
+            except ValueError:
+                tile_id = str(drp_hdulist[0].header["OBJECT"])
         exp_num = int(drp_hdulist[0].header["EXPOSURE"])
         drp_ver = str(drp_hdulist[0].header["DRPVER"])
         return tile_id, exp_num, drp_ver
+
+
+@dataclass(frozen=True)
+class LVMTileCollection:
+    data: Dataset
+    meta: Mapping[int, LVMTileMeta]
+
+    @classmethod
+    def from_tiles(cls, tiles: list[LVMTile]) -> LVMTileCollection:
+        # Concatenate tile datasets along the 'tile' dimension
+        combined_data = concat([tile.data for tile in tiles], dim="tile")
+
+        # Construct metadata dictionary keyed by exposure number
+        meta_dict = {tile.meta.exp_num: tile.meta for tile in tiles}
+
+        return cls(data=combined_data, meta=meta_dict)
+
+    def __repr__(self) -> str:
+        prefix = f"LVMTileCollection ({hex(id(self))}):"
+        prefix += f"\n    Tiles:            {len(self.meta)}"
+        prefix += f"\n    Exposures:        {set(meta.exp_num for meta in self.meta.values())}"
+        prefix += f"\n    DRP versions:     {set(meta.drp_ver for meta in self.meta.values())}"
+        prefix += f"\n    Tile IDs:         {set(meta.tile_id for meta in self.meta.values())}"
+        return f"{prefix}\n{summarize_with_units(self.data)}"
