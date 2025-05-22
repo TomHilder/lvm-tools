@@ -1,9 +1,11 @@
 """helper.py - helper functions for LVM data processing"""
 
+from typing import Sequence
+
 import dask.array as da
 import numpy as np
 from numpy.typing import ArrayLike
-from xarray import Dataset
+from xarray import DataArray, Dataset
 
 
 def daskify_native(array: ArrayLike, chunks: str | int | tuple) -> da.Array:
@@ -49,3 +51,10 @@ def summarize_with_units(ds: Dataset) -> str:
         lines.append(f"        {name:<13} {dims:<28} {dtype:<8} {size:<6} {chunks} [{units}]")
 
     return "\n".join(lines)
+
+
+def xr_isin(arr: DataArray, values: Sequence) -> DataArray:
+    out = arr == values
+    for val in values[1:]:
+        out |= arr == val
+    return out

@@ -1,4 +1,4 @@
-from lvm_lib.tile import LVMTile, LVMTileCollection
+from lvm_lib.data.tile import LVMTile, LVMTileCollection
 
 __all__ = [
     "LVMTile",
