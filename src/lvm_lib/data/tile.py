@@ -158,3 +158,6 @@ class LVMTileCollection:
         prefix += f"\n    DRP versions:     {set(meta.drp_ver for meta in self.meta.values())}"
         prefix += f"\n    Tile IDs:         {set(meta.tile_id for meta in self.meta.values())}"
         return f"{prefix}\n{summarize_with_units(self.data)}"
+
+
+LVMTileLike = LVMTile | LVMTileCollection
