@@ -4,7 +4,7 @@ import warnings
 from typing import Literal
 
 import numpy as np
-from xarray import Dataset
+from xarray import DataArray, Dataset
 
 BAD_FLUX_THRESHOLD = -0.1e-13
 
@@ -13,15 +13,70 @@ ExcludeStrategy = Literal[None, "pixel", "spaxel"]
 FibreStatus = Literal[0, 1, 2, 3]  # I have no idea what these mean, but they're in the data
 
 
+def get_where_nan(arr: DataArray) -> DataArray:
+    return arr.isnull()
+
+
+def get_where_bad(arr: DataArray, bad_range: tuple[float, float]) -> DataArray:
+    return ~(arr > bad_range[0]) & (arr < bad_range[1])
+
+
+def get_where_bad_median(arr: DataArray, bad_range: tuple[float, float]) -> DataArray:
+    where_bad_median_l = arr.median(dim="wavelength") < bad_range[0]
+    where_bad_median_u = arr.median(dim="wavelength") > bad_range[1]
+    all_nan = arr.isnull().all(dim="wavelength")
+    return where_bad_median_l | where_bad_median_u | all_nan
+
+
+def get_where_badfib(fib_stat_arr: DataArray, fibre_status_incl: tuple[FibreStatus]) -> DataArray:
+    return ~fib_stat_arr.isin(fibre_status_incl)
+
+
+def get_where_mask(arr_mask: DataArray) -> DataArray:
+    return arr_mask == 1
+
+
+def combine_wheres(list_where: list[DataArray]) -> DataArray:
+    combined_where = list_where[0]
+    for where in list_where[1:]:
+        combined_where = combined_where | where
+    return combined_where
+
+
 def filter(
     data: Dataset,
     nans_strategy: ExcludeStrategy,
+    F_bad_strategy: ExcludeStrategy,
+    F_bad_range: tuple[float, float],
+    fibre_status_include: tuple[FibreStatus],
+    apply_mask: bool,
 ) -> Dataset:
-    # Filter nans using strategy
-    # Filter bad fluxes using strategy
-    # Filter by fibre status
+    where_bad = []
+
+    # Nans
+    if nans_strategy == "pixel":
+        where_bad += get_where_nan(data["flux"])
+    if nans_strategy == "spaxel":
+        where_bad += get_where_nan(data["flux"]).any(dim="wavelength")
+    else:
+        raise ValueError(f"Unknown nans strategy: {nans_strategy}")
+
+    # Fluxes
+    if F_bad_strategy == "pixel":
+        where_bad += get_where_bad(data["flux"], F_bad_range)
+    elif F_bad_strategy == "spaxel":
+        where_bad += get_where_bad_median(data["flux"], F_bad_range)
+    else:
+        raise ValueError(f"Unknown bad flux strategy: {F_bad_strategy}")
+
+    # Bad fibres
+    where_bad += get_where_badfib(data["fibre_status"], fibre_status_include)
+
     # Filter using mask
-    return data
+    if apply_mask:
+        where_bad += get_where_mask(data["mask"])
+
+    return data.where(combine_wheres(where_bad))
 
 
 def filter_inspector(
@@ -31,48 +86,44 @@ def filter_inspector(
 ):
     # TODO: maybe plots instead of printing?
 
-    # Inspect the data to see what filters are needed
-    # The user can use this before building config and FitData objects
-
-    # nans:
-    where_nan = data["flux"].isnull()
-    n_nans = int(np.sum(where_nan))
-    n_spaxels_nan = int(np.sum(where_nan.any(dim="wavelength")))
-
-    # bad flux (per pix):
-    where_Fbad = ~(data["flux"] > F_bad_range[0]) & (data["flux"] < F_bad_range[1])
-    n_Fbad = int(np.sum(where_Fbad))
-    n_spaxels_Fbad = int(np.sum(where_Fbad.any(dim="wavelength")))
-
-    # bad flux (per spaxel):
     # ignore warnings about median of all nans
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
-        where_Fbad_median_l = data["flux"].median(dim="wavelength") < F_bad_range[0]
-        where_Fbad_median_u = data["flux"].median(dim="wavelength") > F_bad_range[1]
-        all_nan = data["flux"].isnull().all(dim="wavelength")
-        where_Fbad_median = where_Fbad_median_l | where_Fbad_median_u | all_nan
+
+        # nans:
+        where_nan = get_where_nan(data["flux"])
+        n_nans = int(np.sum(where_nan))
+        n_spaxels_nan = int(np.sum(where_nan.any(dim="wavelength")))
+
+        # bad flux (per pix):
+        where_Fbad = get_where_bad(data["flux"], F_bad_range)
+        n_Fbad = int(np.sum(where_Fbad))
+
+        # bad flux (per spaxel):
+        where_Fbad_median = get_where_bad_median(data["flux"], F_bad_range)
         n_Fbad_median = int(np.sum(where_Fbad_median))
 
-    # fibre status:
-    where_badfib = ~data["fibre_status"].isin(fibre_status_include)
-    n_spaxels_badfib = int(np.sum(where_badfib))
+        # fibre status:
+        where_badfib = get_where_badfib(data["fibre_status"], fibre_status_include)
+        n_spaxels_badfib = int(np.sum(where_badfib))
 
-    # mask:
-    where_mask = data["mask"] == 1
-    n_mask = int(np.sum(where_mask))
-    n_spaxels_mask = int(np.sum(where_mask.any(dim="wavelength")))
+        # mask:
+        where_mask = get_where_mask(data["mask"])
+        n_mask = int(np.sum(where_mask))
+        n_spaxels_mask = int(np.sum(where_mask.any(dim="wavelength")))
 
-    # anything is bad
-    where_anybad = where_nan | where_Fbad | where_badfib | where_mask
-    n_anybad = int(np.sum(where_anybad))
-    n_spaxels_anybad = int(np.sum(where_anybad.any(dim="wavelength")))
+        # anything is bad
+        where_anybad = where_nan | where_Fbad | where_badfib | where_mask
+        n_anybad = int(np.sum(where_anybad))
+
+        where_anybad_spaxel = where_nan | where_Fbad_median | where_badfib | where_mask
+        n_spaxels_anybad = int(np.sum(where_anybad_spaxel.any(dim="wavelength")))
 
     return {
         "nans": (n_nans, n_spaxels_nan),
-        "bad flux": (n_Fbad, n_spaxels_Fbad),
-        "bad flux median": (n_Fbad_median,),
-        "fibre status": (n_spaxels_badfib,),
+        "bad flux": (n_Fbad, None),
+        "bad flux median": (None, n_Fbad_median),
+        "fibre status": (None, n_spaxels_badfib),
         "mask": (n_mask, n_spaxels_mask),
         "any bad": (n_anybad, n_spaxels_anybad),
     }
