@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 from lvm_lib.data.tile import LVMTileLike
 from lvm_lib.fit_data.clipping import bounding_square, clip_dataset
 from lvm_lib.fit_data.filtering import filter_dataset
-from lvm_lib.fit_data.normalisation import calc_normalisation
+from lvm_lib.fit_data.normalisation import calc_normalisation, get_norm_funcs
 
 
 def clip_data(tile_data: Dataset, config: DataConfig) -> Dataset:
@@ -61,3 +61,13 @@ def get_normalisations(
             calc_normalisation(ds["ra"].values, config.normalise_αδ_strategy),
             calc_normalisation(ds["dec"].values, config.normalise_αδ_strategy),
         )
+
+
+def get_normalisation_functions(
+    config: DataConfig,
+) -> tuple[tuple[callable, callable], tuple[callable, callable], tuple[callable, callable]]:
+    return (
+        *get_norm_funcs(config.normalise_F_offset, config.normalise_F_scale),
+        *get_norm_funcs(config.normalise_α_offset, config.normalise_α_scale),
+        *get_norm_funcs(config.normalise_δ_offset, config.normalise_δ_scale),
+    )
