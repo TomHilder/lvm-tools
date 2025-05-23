@@ -3,66 +3,46 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Literal, get_args
+from typing import get_args
 
 import numpy as np
-from numpy.typing import ArrayLike
 
 from lvm_lib.config.data_config_calc import bounding_square
 from lvm_lib.data.tile import LVMTileLike
-
-BAD_SPAXEL_THRESHOLD = -0.1e-13
-NORM_PADDING = 0.05
-
-
-ExcludeStrategy = Literal[None, "pixel", "spaxel"]
-NormaliseStrategy = Literal[None, "max only", "98 only", "extrema", "1σ", "2σ", "3σ", "padded"]
-
-FibreStatus = Literal[0, 1, 2, 3]  # I have no idea what these mean, but they're in the data
-
-
-def calc_normalisation(data: ArrayLike, strategy: NormaliseStrategy) -> tuple[float, float]:
-    offset = 0.0
-    scale = 1.0
-    if strategy is None:
-        pass
-    elif strategy == "max only":
-        scale = np.nanmax(data)
-    elif strategy == "98 only":
-        scale = np.nanpercentile(data, 98)
-    elif strategy == "extrema":
-        offset = np.nanmin(data)
-        scale = np.nanmax(data) - offset
-    elif strategy in ("1σ", "2σ", "3σ"):
-        offset = np.nanmean(data)
-        scale = 2.0 * int(strategy[0]) * np.nanstd(data)
-    elif strategy == "padded":
-        data_range = np.nanmax(data) - np.nanmin(data)
-        offset = np.nanmin(data) - NORM_PADDING * data_range
-        scale = (1 + 2 * NORM_PADDING) * data_range
-    else:
-        raise ValueError(f"Unknown normalisation strategy: {strategy}")
-    return offset, scale
-
-
-def normalise(data: ArrayLike, offset: float, scale: float) -> ArrayLike:
-    return (data - offset) / scale
-
-
-def denormalise(data: ArrayLike, offset: float, scale: float) -> ArrayLike:
-    return data * scale + offset
+from lvm_lib.fit_data.filtering import BAD_FLUX_THRESHOLD, ExcludeStrategy, FibreStatus
+from lvm_lib.fit_data.normalisation import NormaliseStrategy
 
 
 @dataclass(frozen=True)
 class DataConfig:
+    """
+    Configuration object for data processing before fitting.
+
+    args:
+        λ_range: tuple[float, float] - Wavelength range to include.
+        α_range: tuple[float, float] - Right Ascension range to include.
+        δ_range: tuple[float, float] - Declination range to include.
+        nans_strategy: ExcludeStrategy - Strategy for handling NaN values.
+        F_bad_strategy: ExcludeStrategy - Strategy for handling bad flux values. For "pixel", the flux range is applied to each pixel. For "spaxel", the flux range is applied to the median of all pixels in a spaxel.
+        F_range: tuple[float, float] - Flux range to include.
+        fibre_status_include: tuple[FibreStatus] - Fibre status values to include.
+        apply_mask: bool - Whether to apply a mask to the data.
+        normalise_F_strategy: NormaliseStrategy - Strategy for normalising flux data.
+        normalise_F_offset: float - Offset for normalising flux data.
+        normalise_F_scale: float - Scale for normalising flux data.
+        normalise_αδ_strategy: NormaliseStrategy - Strategy for normalising α and δ data.
+        normalise_αδ_offset: float - Offset for normalising α and δ data.
+        normalise_αδ_scale: float - Scale for normalising α and δ data.
+    """
+
     # Data clipping ranges (aka choose data of interest)
     λ_range: tuple[float, float] = (-np.inf, np.inf)
     α_range: tuple[float, float] = (-np.inf, np.inf)
     δ_range: tuple[float, float] = (-np.inf, np.inf)
     # Bad data ranges and strategies (aka exclude bad data)
-    F_bad_strategy: ExcludeStrategy = "spaxel"
-    F_bad_range: tuple[float, float] = (-np.inf, np.inf)
     nans_strategy: ExcludeStrategy = "pixel"
+    F_bad_strategy: ExcludeStrategy = "spaxel"
+    F_range: tuple[float, float] = (-np.inf, np.inf)
     # Handling of flagged data
     fibre_status_include: tuple[FibreStatus] = (0,)
     apply_mask: bool = True
@@ -78,9 +58,9 @@ class DataConfig:
         self._validate_range(self.λ_range)
         self._validate_range(self.α_range)
         self._validate_range(self.δ_range)
-        self._validate_excl_strategy(self.F_bad_strategy)
-        self._validate_range(self.F_bad_range)
         self._validate_excl_strategy(self.nans_strategy)
+        self._validate_excl_strategy(self.F_bad_strategy)
+        self._validate_range(self.F_range)
         self._validate_fib_status_incl(self.fibre_status_include)
         self._validate_apply_mask(self.apply_mask)
         self._validate_norm_strategy(self.normalise_F_strategy)
@@ -106,7 +86,7 @@ class DataConfig:
             tiles.data["dec"].max(),
         )
         # F_bad range we typicalling exclude whole spaxels below BAD_SPAXEL_THRESHOLD
-        F_bad_range = (BAD_SPAXEL_THRESHOLD, np.inf)
+        F_range = (BAD_FLUX_THRESHOLD, np.inf)
         #
 
         calculated_config = DataConfig(...).to_dict()
