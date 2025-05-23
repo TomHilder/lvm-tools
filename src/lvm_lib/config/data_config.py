@@ -3,10 +3,18 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import get_args
 
 import numpy as np
 
+from lvm_lib.config.validation import (
+    validate_apply_mask,
+    validate_excl_strategy,
+    validate_fib_status_incl,
+    validate_norm_strategy,
+    validate_offset,
+    validate_range,
+    validate_scale,
+)
 from lvm_lib.data.tile import LVMTileLike
 from lvm_lib.fit_data.filtering import BAD_FLUX_THRESHOLD, ExcludeStrategy, FibreStatus
 from lvm_lib.fit_data.normalisation import NormaliseStrategy
@@ -57,23 +65,23 @@ class DataConfig:
     normalise_δ_scale: float = 1.0
 
     def __post_init__(self) -> None:
-        self._validate_range(self.λ_range)
-        self._validate_range(self.α_range)
-        self._validate_range(self.δ_range)
-        self._validate_excl_strategy(self.nans_strategy)
-        self._validate_excl_strategy(self.F_bad_strategy)
-        self._validate_range(self.F_range)
-        self._validate_fib_status_incl(self.fibre_status_include)
-        self._validate_apply_mask(self.apply_mask)
-        self._validate_norm_strategy(self.normalise_F_strategy)
-        self._validate_norm_strategy(self.normalise_αδ_strategy)
-        self._validate_offset(self.normalise_F_offset)
-        self._validate_scale(self.normalise_F_scale)
-        self._validate_norm_strategy(self.normalise_αδ_strategy)
-        self._validate_offset(self.normalise_α_offset)
-        self._validate_scale(self.normalise_α_scale)
-        self._validate_offset(self.normalise_δ_offset)
-        self._validate_scale(self.normalise_δ_scale)
+        validate_range(self.λ_range)
+        validate_range(self.α_range)
+        validate_range(self.δ_range)
+        validate_excl_strategy(self.nans_strategy)
+        validate_excl_strategy(self.F_bad_strategy)
+        validate_range(self.F_range)
+        validate_fib_status_incl(self.fibre_status_include)
+        validate_apply_mask(self.apply_mask)
+        validate_norm_strategy(self.normalise_F_strategy)
+        validate_norm_strategy(self.normalise_αδ_strategy)
+        validate_offset(self.normalise_F_offset)
+        validate_scale(self.normalise_F_scale)
+        validate_norm_strategy(self.normalise_αδ_strategy)
+        validate_offset(self.normalise_α_offset)
+        validate_scale(self.normalise_α_scale)
+        validate_offset(self.normalise_δ_offset)
+        validate_scale(self.normalise_δ_scale)
 
     @staticmethod
     def default() -> DataConfig:
@@ -87,12 +95,8 @@ class DataConfig:
         α_range, δ_range = get_αδ_ranges(tiles)
 
         # Instantiate a data config with calc'd + default + overrides
-        config = DataConfig(
-            λ_range=λ_range,
-            α_range=α_range,
-            δ_range=δ_range,
-            **overrides,
-        )
+        config_dict = DataConfig(λ_range=λ_range, α_range=α_range, δ_range=δ_range).to_dict()
+        config = DataConfig.from_dict(config_dict | overrides)
 
         # Clip and filter the data
         ds = process_tile_data(tiles, config)
@@ -104,14 +108,17 @@ class DataConfig:
             (normalise_δ_offset, normalise_δ_scale),
         ) = get_normalisations(ds, config)
 
+        # We want a square domain in the α, δ plane
+        norm_αδ_scale = max(normalise_α_scale, normalise_δ_scale)
+
         # Update the config with the calculated values
         norm_overrides = {
             "normalise_F_offset": normalise_F_offset,
             "normalise_F_scale": normalise_F_scale,
             "normalise_α_offset": normalise_α_offset,
-            "normalise_α_scale": normalise_α_scale,
+            "normalise_α_scale": norm_αδ_scale,
             "normalise_δ_offset": normalise_δ_offset,
-            "normalise_δ_scale": normalise_δ_scale,
+            "normalise_δ_scale": norm_αδ_scale,
         }
 
         # Merge partial config + norm + user overrides, with user overrides taking precedence
@@ -125,56 +132,6 @@ class DataConfig:
 
     def to_dict(self) -> dict:
         return asdict(self)
-
-    # TODO: move validation functions to a separate module
-
-    @staticmethod
-    def _validate_range(x_range: tuple[float, float]) -> None:
-        if not isinstance(x_range, tuple):
-            raise TypeError("Data range must be in a tuple.")
-        if len(x_range) != 2:
-            raise ValueError("Data range must be a tuple with exactly two values (min, max).")
-        if x_range[1] < x_range[0]:
-            raise ValueError("Requested data range restriction has max < min.")
-
-    @staticmethod
-    def _validate_excl_strategy(strategy: ExcludeStrategy) -> None:
-        if strategy not in get_args(ExcludeStrategy):
-            raise ValueError(f"Unknown exclusion strategy: {strategy}")
-
-    @staticmethod
-    def _validate_norm_strategy(strategy: NormaliseStrategy) -> None:
-        if strategy not in get_args(NormaliseStrategy):
-            raise ValueError(f"Unknown normalisation strategy: {strategy}")
-
-    @staticmethod
-    def _validate_fib_status_incl(fibre_status_include: tuple[FibreStatus]) -> None:
-        if not isinstance(fibre_status_include, tuple):
-            raise TypeError("fibre_status_include must be a tuple.")
-        for fs in fibre_status_include:
-            if fs not in get_args(FibreStatus):
-                raise ValueError(f"Unknown fibre status: {fs}")
-
-    @staticmethod
-    def _validate_offset(offset: float) -> None:
-        if not isinstance(offset, (float, np.floating)):
-            raise TypeError("offset must be float.")
-        if not np.isfinite(offset):
-            raise Exception("Bad offset (nan or infty).")
-
-    @staticmethod
-    def _validate_scale(scale: float) -> None:
-        if not isinstance(scale, (float, np.floating)):
-            raise TypeError("scale must be float.")
-        if not np.isfinite(scale):
-            raise Exception("Bad scale (nan or infty).")
-        if scale <= 0:
-            raise Exception("Scale is not positive, but it must be.")
-
-    @staticmethod
-    def _validate_apply_mask(apply_mask: bool) -> None:
-        if not isinstance(apply_mask, bool):
-            raise TypeError("apply_mask must be a boolean.")
 
     def __repr__(self) -> str:
         def format_tuple(t):

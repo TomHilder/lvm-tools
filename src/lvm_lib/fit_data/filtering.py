@@ -76,7 +76,7 @@ def filter_dataset(
     if apply_mask:
         where_bad.append(get_where_mask(data["mask"]))
 
-    return data.where(combine_wheres(where_bad))
+    return data.where(~combine_wheres(where_bad))
 
 
 def filter_inspector(

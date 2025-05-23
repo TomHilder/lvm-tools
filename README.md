@@ -4,5 +4,8 @@ The point of this library is to contain the objects that will wrap the LVM data 
 
 TODO:
 
-* Move relevent code from spaghetti/model here, especially for Tile dataclass
-* Improve ???
+- [ ] repr for FitData
+- [ ] Logging/hashing
+- [ ] Cache
+- [ ] OptConfig
+

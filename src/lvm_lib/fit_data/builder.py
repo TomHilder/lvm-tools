@@ -7,7 +7,11 @@ from hashlib import sha256
 from lvm_lib.config.data_config import DataConfig
 from lvm_lib.data.tile import LVMTileLike
 from lvm_lib.fit_data.fit_data import FitData
-from lvm_lib.fit_data.processing import get_normalisation_functions, process_tile_data
+from lvm_lib.fit_data.processing import (
+    flatten_tile_coord,
+    get_normalisation_functions,
+    process_tile_data,
+)
 
 
 @dataclass(frozen=True)
@@ -17,7 +21,7 @@ class FitDataBuilder:
 
     def build(self) -> FitData:
         return FitData(
-            process_tile_data(self.tiles, self.config),
+            flatten_tile_coord(process_tile_data(self.tiles, self.config)),
             *get_normalisation_functions(self.config),
         )
 

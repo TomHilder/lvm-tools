@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 from xarray import Dataset
 
@@ -65,9 +65,16 @@ def get_normalisations(
 
 def get_normalisation_functions(
     config: DataConfig,
-) -> tuple[tuple[callable, callable], tuple[callable, callable], tuple[callable, callable]]:
+) -> tuple[tuple[Callable, Callable], tuple[Callable, Callable], tuple[Callable, Callable]]:
     return (
         *get_norm_funcs(config.normalise_F_offset, config.normalise_F_scale),
+        *get_norm_funcs(0.0, config.normalise_F_scale**-2),
         *get_norm_funcs(config.normalise_α_offset, config.normalise_α_scale),
         *get_norm_funcs(config.normalise_δ_offset, config.normalise_δ_scale),
     )
+
+
+def flatten_tile_coord(ds: Dataset) -> Dataset:
+    """Flatten the tile and spaxel coordinates into a single coordinate."""
+    flattened = ds.stack(flat_spaxel=("tile", "spaxel")).reset_index("flat_spaxel")
+    return flattened.drop_vars("tile")
