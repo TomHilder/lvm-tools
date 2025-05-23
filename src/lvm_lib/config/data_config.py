@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import asdict, dataclass
 from typing import get_args
 
@@ -91,10 +92,10 @@ class DataConfig:
         # λ_range cannot be set automatically
         # α_range and δ_range we typically want a square region that contains all the spaxels
         α_range, δ_range = bounding_square(
-            tiles.data["ra"].min(),
-            tiles.data["ra"].max(),
-            tiles.data["dec"].min(),
-            tiles.data["dec"].max(),
+            tiles.data["ra"].values.min(),
+            tiles.data["ra"].values.max(),
+            tiles.data["dec"].values.min(),
+            tiles.data["dec"].values.max(),
         )
 
         # Instantiate a data config with calc'd + default + overrides
@@ -105,27 +106,31 @@ class DataConfig:
             **overrides,
         )
 
-        # Clip then filter the data
-        ds = clip_dataset(tiles.data, config.λ_range, config.α_range, config.δ_range)
-        ds = filter_dataset(
-            tiles.data,
-            config.nans_strategy,
-            config.F_bad_strategy,
-            config.F_range,
-            config.fibre_status_include,
-            config.apply_mask,
-        )
+        # Suppress warnings about all nan slices in the dataset
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
 
-        # Calculate the normalisation parameters
-        normalise_F_offset, normalise_F_scale = calc_normalisation(
-            ds["flux"].values, config.normalise_F_strategy
-        )
-        normalise_α_offset, normalise_α_scale = calc_normalisation(
-            ds["ra"].values, config.normalise_αδ_strategy
-        )
-        normalise_δ_offset, normalise_δ_scale = calc_normalisation(
-            ds["dec"].values, config.normalise_αδ_strategy
-        )
+            # Clip then filter the data
+            ds = clip_dataset(tiles.data, config.λ_range, config.α_range, config.δ_range)
+            ds = filter_dataset(
+                tiles.data,
+                config.nans_strategy,
+                config.F_bad_strategy,
+                config.F_range,
+                config.fibre_status_include,
+                config.apply_mask,
+            )
+
+            # Calculate the normalisation parameters
+            normalise_F_offset, normalise_F_scale = calc_normalisation(
+                ds["flux"].values, config.normalise_F_strategy
+            )
+            normalise_α_offset, normalise_α_scale = calc_normalisation(
+                ds["ra"].values, config.normalise_αδ_strategy
+            )
+            normalise_δ_offset, normalise_δ_scale = calc_normalisation(
+                ds["dec"].values, config.normalise_αδ_strategy
+            )
 
         # Update the config with the calculated values
         norm_overrides = {
@@ -138,9 +143,7 @@ class DataConfig:
         }
 
         # Merge partial config + norm + user overrides, with user overrides taking precedence
-        config_dict = DataConfig(...).to_dict()
-        new_config_dict = config_dict | norm_overrides | overrides
-        return DataConfig.from_dict(new_config_dict)
+        return DataConfig.from_dict(config.to_dict() | norm_overrides | overrides)
 
     @staticmethod
     def from_dict(config: dict) -> DataConfig:
@@ -182,14 +185,14 @@ class DataConfig:
 
     @staticmethod
     def _validate_offset(offset: float) -> None:
-        if not isinstance(offset, float):
+        if not isinstance(offset, (float, np.floating)):
             raise TypeError("offset must be float.")
         if not np.isfinite(offset):
             raise Exception("Bad offset (nan or infty).")
 
     @staticmethod
     def _validate_scale(scale: float) -> None:
-        if not isinstance(scale, float):
+        if not isinstance(scale, (float, np.floating)):
             raise TypeError("scale must be float.")
         if not np.isfinite(scale):
             raise Exception("Bad scale (nan or infty).")
@@ -200,3 +203,53 @@ class DataConfig:
     def _validate_apply_mask(apply_mask: bool) -> None:
         if not isinstance(apply_mask, bool):
             raise TypeError("apply_mask must be a boolean.")
+
+    def __repr__(self) -> str:
+        def format_tuple(t):
+            return f"({', '.join(f'{x:.2f}' if isinstance(x, float) else str(x) for x in t)})"
+
+        def format_float(f):
+            return f"{f:.2f}"
+
+        lines = [f"{self.__class__.__name__} ({hex(id(self))}):"]
+
+        pad = 26
+
+        # Data clipping ranges
+        lines.append("    Data clipping ranges:")
+        lines.append(f"        {'λ_range:':{pad}}{format_tuple(self.λ_range)}")
+        lines.append(f"        {'α_range:':{pad}}{format_tuple(self.α_range)}")
+        lines.append(f"        {'δ_range:':{pad}}{format_tuple(self.δ_range)}")
+
+        # Bad data handling
+        lines.append("    Bad data handling:")
+        lines.append(f"        {'nans_strategy:':{pad}}'{self.nans_strategy}'")
+        lines.append(f"        {'F_bad_strategy:':{pad}}'{self.F_bad_strategy}'")
+        lines.append(f"        {'F_range:':{pad}}{format_tuple(self.F_range)}")
+
+        # Flagged data handling
+        lines.append("    Flagged data handling:")
+        lines.append(f"        {'fibre_status_include:':{pad}}{self.fibre_status_include}")
+        lines.append(f"        {'apply_mask:':{pad}}{self.apply_mask}")
+
+        # Flux normalisation
+        lines.append("    Flux normalisation:")
+        lines.append(f"        {'normalise_F_strategy:':{pad}}'{self.normalise_F_strategy}'")
+        lines.append(
+            f"        {'normalise_F_offset:':{pad}}{format_float(self.normalise_F_offset)}"
+        )
+        lines.append(f"        {'normalise_F_scale:':{pad}}{format_float(self.normalise_F_scale)}")
+
+        # Coordinate normalisation
+        lines.append("    Coordinate normalisation:")
+        lines.append(f"        {'normalise_αδ_strategy:':{pad}}'{self.normalise_αδ_strategy}'")
+        lines.append(
+            f"        {'normalise_α_offset:':{pad}}{format_float(self.normalise_α_offset)}"
+        )
+        lines.append(f"        {'normalise_α_scale:':{pad}}{format_float(self.normalise_α_scale)}")
+        lines.append(
+            f"        {'normalise_δ_offset:':{pad}}{format_float(self.normalise_δ_offset)}"
+        )
+        lines.append(f"        {'normalise_δ_scale:':{pad}}{format_float(self.normalise_δ_scale)}")
+
+        return "\n".join(lines)
