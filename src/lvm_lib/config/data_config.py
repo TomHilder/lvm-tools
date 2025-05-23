@@ -55,7 +55,7 @@ def denormalise(data: ArrayLike, offset: float, scale: float) -> ArrayLike:
 
 @dataclass(frozen=True)
 class DataConfig:
-    # Data truncation ranges (aka choose data of interest)
+    # Data clipping ranges (aka choose data of interest)
     λ_range: tuple[float, float] = (-np.inf, np.inf)
     α_range: tuple[float, float] = (-np.inf, np.inf)
     δ_range: tuple[float, float] = (-np.inf, np.inf)
