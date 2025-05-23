@@ -2,21 +2,15 @@
 
 from __future__ import annotations
 
-import warnings
 from dataclasses import asdict, dataclass
 from typing import get_args
 
 import numpy as np
 
 from lvm_lib.data.tile import LVMTileLike
-from lvm_lib.fit_data.clipping import bounding_square, clip_dataset
-from lvm_lib.fit_data.filtering import (
-    BAD_FLUX_THRESHOLD,
-    ExcludeStrategy,
-    FibreStatus,
-    filter_dataset,
-)
-from lvm_lib.fit_data.normalisation import NormaliseStrategy, calc_normalisation
+from lvm_lib.fit_data.filtering import BAD_FLUX_THRESHOLD, ExcludeStrategy, FibreStatus
+from lvm_lib.fit_data.normalisation import NormaliseStrategy
+from lvm_lib.fit_data.processing import get_normalisations, get_αδ_ranges, process_tile_data
 
 
 @dataclass(frozen=True)
@@ -90,13 +84,7 @@ class DataConfig:
         tiles: LVMTileLike, λ_range: tuple[float, float] = (-np.inf, np.inf), **overrides
     ) -> DataConfig:
         # λ_range cannot be set automatically
-        # α_range and δ_range we typically want a square region that contains all the spaxels
-        α_range, δ_range = bounding_square(
-            tiles.data["ra"].values.min(),
-            tiles.data["ra"].values.max(),
-            tiles.data["dec"].values.min(),
-            tiles.data["dec"].values.max(),
-        )
+        α_range, δ_range = get_αδ_ranges(tiles)
 
         # Instantiate a data config with calc'd + default + overrides
         config = DataConfig(
@@ -106,31 +94,15 @@ class DataConfig:
             **overrides,
         )
 
-        # Suppress warnings about all nan slices in the dataset
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=RuntimeWarning)
+        # Clip and filter the data
+        ds = process_tile_data(tiles, config)
 
-            # Clip then filter the data
-            ds = clip_dataset(tiles.data, config.λ_range, config.α_range, config.δ_range)
-            ds = filter_dataset(
-                tiles.data,
-                config.nans_strategy,
-                config.F_bad_strategy,
-                config.F_range,
-                config.fibre_status_include,
-                config.apply_mask,
-            )
-
-            # Calculate the normalisation parameters
-            normalise_F_offset, normalise_F_scale = calc_normalisation(
-                ds["flux"].values, config.normalise_F_strategy
-            )
-            normalise_α_offset, normalise_α_scale = calc_normalisation(
-                ds["ra"].values, config.normalise_αδ_strategy
-            )
-            normalise_δ_offset, normalise_δ_scale = calc_normalisation(
-                ds["dec"].values, config.normalise_αδ_strategy
-            )
+        # Calculate the normalisation parameters
+        (
+            (normalise_F_offset, normalise_F_scale),
+            (normalise_α_offset, normalise_α_scale),
+            (normalise_δ_offset, normalise_δ_scale),
+        ) = get_normalisations(ds, config)
 
         # Update the config with the calculated values
         norm_overrides = {
@@ -206,10 +178,26 @@ class DataConfig:
 
     def __repr__(self) -> str:
         def format_tuple(t):
-            return f"({', '.join(f'{x:.2f}' if isinstance(x, float) else str(x) for x in t)})"
+            """Format tuple with floats to 2 decimal places or scientific notation if very small."""
+            formatted = []
+            for x in t:
+                if isinstance(x, float):
+                    if abs(x) < 1e-3 and x != 0:
+                        formatted.append(f"{x:.2e}")
+                    else:
+                        formatted.append(f"{x:.2f}")
+                else:
+                    formatted.append(str(x))
+            return f"({', '.join(formatted)})"
 
         def format_float(f):
-            return f"{f:.2f}"
+            """Format float to 2 decimal places, or scientific notation if very small."""
+            if abs(f) < 1e-3 and f != 0:
+                return f"{f:.2e}"
+            else:
+                return f"{f:.2f}"
+
+        lines = [f"{self.__class__.__name__}("]
 
         lines = [f"{self.__class__.__name__} ({hex(id(self))}):"]
 

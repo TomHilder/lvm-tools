@@ -1,5 +1,6 @@
 """normalisation.py - data normalisation for data preparation."""
 
+from functools import partial
 from typing import Literal
 
 import numpy as np
@@ -41,3 +42,7 @@ def normalise(data: ArrayLike, offset: float, scale: float) -> ArrayLike:
 
 def denormalise(data: ArrayLike, offset: float, scale: float) -> ArrayLike:
     return data * scale + offset
+
+
+def get_norm_funcs(offset: float, scale: float) -> callable:
+    return (partial(f, offset=offset, scale=scale) for f in (normalise, denormalise))
