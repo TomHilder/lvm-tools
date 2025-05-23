@@ -43,7 +43,7 @@ def combine_wheres(list_where: list[DataArray]) -> DataArray:
     return combined_where
 
 
-def filter(
+def filter_dataset(
     data: Dataset,
     nans_strategy: ExcludeStrategy,
     F_bad_strategy: ExcludeStrategy,
@@ -55,26 +55,26 @@ def filter(
 
     # Nans
     if nans_strategy == "pixel":
-        where_bad += get_where_nan(data["flux"])
-    if nans_strategy == "spaxel":
-        where_bad += get_where_nan(data["flux"]).any(dim="wavelength")
+        pass  # no action needed
+    elif nans_strategy == "spaxel":
+        where_bad.append(get_where_nan(data["flux"]).any(dim="wavelength"))
     else:
         raise ValueError(f"Unknown nans strategy: {nans_strategy}")
 
     # Fluxes
     if F_bad_strategy == "pixel":
-        where_bad += get_where_bad(data["flux"], F_bad_range)
+        where_bad.append(get_where_bad(data["flux"], F_bad_range))
     elif F_bad_strategy == "spaxel":
-        where_bad += get_where_bad_median(data["flux"], F_bad_range)
+        where_bad.append(get_where_bad_median(data["flux"], F_bad_range))
     else:
         raise ValueError(f"Unknown bad flux strategy: {F_bad_strategy}")
 
     # Bad fibres
-    where_bad += get_where_badfib(data["fibre_status"], fibre_status_include)
+    where_bad.append(get_where_badfib(data["fibre_status"], fibre_status_include))
 
     # Filter using mask
     if apply_mask:
-        where_bad += get_where_mask(data["mask"])
+        where_bad.append(get_where_mask(data["mask"]))
 
     return data.where(combine_wheres(where_bad))
 

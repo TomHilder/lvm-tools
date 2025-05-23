@@ -7,10 +7,15 @@ from typing import get_args
 
 import numpy as np
 
-from lvm_lib.config.data_config_calc import bounding_square
 from lvm_lib.data.tile import LVMTileLike
-from lvm_lib.fit_data.filtering import BAD_FLUX_THRESHOLD, ExcludeStrategy, FibreStatus
-from lvm_lib.fit_data.normalisation import NormaliseStrategy
+from lvm_lib.fit_data.clipping import bounding_square, clip_dataset
+from lvm_lib.fit_data.filtering import (
+    BAD_FLUX_THRESHOLD,
+    ExcludeStrategy,
+    FibreStatus,
+    filter_dataset,
+)
+from lvm_lib.fit_data.normalisation import NormaliseStrategy, calc_normalisation
 
 
 @dataclass(frozen=True)
@@ -42,7 +47,7 @@ class DataConfig:
     # Bad data ranges and strategies (aka exclude bad data)
     nans_strategy: ExcludeStrategy = "pixel"
     F_bad_strategy: ExcludeStrategy = "spaxel"
-    F_range: tuple[float, float] = (-np.inf, np.inf)
+    F_range: tuple[float, float] = (BAD_FLUX_THRESHOLD, np.inf)
     # Handling of flagged data
     fibre_status_include: tuple[FibreStatus] = (0,)
     apply_mask: bool = True
@@ -51,8 +56,10 @@ class DataConfig:
     normalise_F_offset: float = 0.0
     normalise_F_scale: float = 1.0
     normalise_αδ_strategy: NormaliseStrategy = "padded"
-    normalise_αδ_offset: float = 0.0
-    normalise_αδ_scale: float = 1.0
+    normalise_α_offset: float = 0.0
+    normalise_α_scale: float = 1.0
+    normalise_δ_offset: float = 0.0
+    normalise_δ_scale: float = 1.0
 
     def __post_init__(self) -> None:
         self._validate_range(self.λ_range)
@@ -68,15 +75,19 @@ class DataConfig:
         self._validate_offset(self.normalise_F_offset)
         self._validate_scale(self.normalise_F_scale)
         self._validate_norm_strategy(self.normalise_αδ_strategy)
-        self._validate_offset(self.normalise_αδ_offset)
-        self._validate_scale(self.normalise_αδ_scale)
+        self._validate_offset(self.normalise_α_offset)
+        self._validate_scale(self.normalise_α_scale)
+        self._validate_offset(self.normalise_δ_offset)
+        self._validate_scale(self.normalise_δ_scale)
 
     @staticmethod
     def default() -> DataConfig:
         return DataConfig()
 
     @staticmethod
-    def from_tiles(tiles: LVMTileLike, **overrides) -> DataConfig:
+    def from_tiles(
+        tiles: LVMTileLike, λ_range: tuple[float, float] = (-np.inf, np.inf), **overrides
+    ) -> DataConfig:
         # λ_range cannot be set automatically
         # α_range and δ_range we typically want a square region that contains all the spaxels
         α_range, δ_range = bounding_square(
@@ -85,13 +96,51 @@ class DataConfig:
             tiles.data["dec"].min(),
             tiles.data["dec"].max(),
         )
-        # F_bad range we typicalling exclude whole spaxels below BAD_SPAXEL_THRESHOLD
-        F_range = (BAD_FLUX_THRESHOLD, np.inf)
-        #
 
-        calculated_config = DataConfig(...).to_dict()
-        overrides_applied = calculated_config | overrides
-        return DataConfig.from_dict(overrides_applied)
+        # Instantiate a data config with calc'd + default + overrides
+        config = DataConfig(
+            λ_range=λ_range,
+            α_range=α_range,
+            δ_range=δ_range,
+            **overrides,
+        )
+
+        # Clip then filter the data
+        ds = clip_dataset(tiles.data, config.λ_range, config.α_range, config.δ_range)
+        ds = filter_dataset(
+            tiles.data,
+            config.nans_strategy,
+            config.F_bad_strategy,
+            config.F_range,
+            config.fibre_status_include,
+            config.apply_mask,
+        )
+
+        # Calculate the normalisation parameters
+        normalise_F_offset, normalise_F_scale = calc_normalisation(
+            ds["flux"].values, config.normalise_F_strategy
+        )
+        normalise_α_offset, normalise_α_scale = calc_normalisation(
+            ds["ra"].values, config.normalise_αδ_strategy
+        )
+        normalise_δ_offset, normalise_δ_scale = calc_normalisation(
+            ds["dec"].values, config.normalise_αδ_strategy
+        )
+
+        # Update the config with the calculated values
+        norm_overrides = {
+            "normalise_F_offset": normalise_F_offset,
+            "normalise_F_scale": normalise_F_scale,
+            "normalise_α_offset": normalise_α_offset,
+            "normalise_α_scale": normalise_α_scale,
+            "normalise_δ_offset": normalise_δ_offset,
+            "normalise_δ_scale": normalise_δ_scale,
+        }
+
+        # Merge partial config + norm + user overrides, with user overrides taking precedence
+        config_dict = DataConfig(...).to_dict()
+        new_config_dict = config_dict | norm_overrides | overrides
+        return DataConfig.from_dict(new_config_dict)
 
     @staticmethod
     def from_dict(config: dict) -> DataConfig:
