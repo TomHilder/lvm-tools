@@ -1,4 +1,4 @@
-"""tile.py - Tile class for LVM data processing"""
+"""tile.py - Tile classes for LVM data processing."""
 
 from __future__ import annotations
 

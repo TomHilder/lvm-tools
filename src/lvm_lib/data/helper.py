@@ -1,4 +1,4 @@
-"""helper.py - helper functions for LVM data processing"""
+"""helper.py - helper functions for LVM data processing."""
 
 import dask.array as da
 import numpy as np
