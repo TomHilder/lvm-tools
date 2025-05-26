@@ -6,7 +6,7 @@ from typing import Callable, Literal
 import numpy as np
 from numpy.typing import ArrayLike
 
-NORM_PADDING = 0.05
+NORM_PADDING = 0.01
 
 
 NormaliseStrategy = Literal[None, "max only", "98 only", "extrema", "1σ", "2σ", "3σ", "padded"]

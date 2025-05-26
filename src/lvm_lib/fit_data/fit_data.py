@@ -34,8 +34,8 @@ class FitData:
         return self.normalise_flux(to_jax_array(self.processed_data["flux"].values))
 
     @property
-    def ivar(self) -> JaxArray:
-        return self.normalise_ivar(to_jax_array(self.processed_data["ivar"].values))
+    def i_var(self) -> JaxArray:
+        return self.normalise_ivar(to_jax_array(self.processed_data["i_var"].values))
 
     @property
     def α(self) -> JaxArray:
