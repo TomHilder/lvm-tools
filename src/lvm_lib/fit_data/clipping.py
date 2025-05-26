@@ -9,7 +9,7 @@ def bounding_square(
     y_min: float,
     y_max: float,
 ) -> tuple[tuple[float, float], tuple[float, float]]:
-    t_range = max(x_max - x_min, y_max - y_min)
+    t_range = 1.01 * max(x_max - x_min, y_max - y_min)
     x_mid = (x_min + x_max) / 2
     y_mid = (y_min + y_max) / 2
     x_min_ = x_mid - t_range / 2
