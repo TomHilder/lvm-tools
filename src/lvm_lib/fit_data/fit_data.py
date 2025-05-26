@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Callable
 
 import jax.numpy as jnp
-from jax.typing import Array as JaxArray
+from jaxtyping import Array as JaxArray
 from xarray import DataArray, Dataset
 
 

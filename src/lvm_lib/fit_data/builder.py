@@ -1,11 +1,11 @@
 """builder.py - FitDataBuilder class for constructing FitData with reproducibility."""
 
 import json
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from hashlib import sha256
 
 from lvm_lib.config.data_config import DataConfig
-from lvm_lib.data.tile import LVMTileLike
+from lvm_lib.data.tile import LVMTile, LVMTileLike
 from lvm_lib.fit_data.fit_data import FitData
 from lvm_lib.fit_data.processing import (
     flatten_tile_coord,
@@ -27,8 +27,26 @@ class FitDataBuilder:
 
     def hash(self) -> str:
         data = {
-            "config": json.dumps(self.config.to_dict(), sort_keys=True),
-            "tiles": ...,  # tile meta data
+            "config": json.dumps(self._configdict, sort_keys=True),
+            "tiles": json.dumps(self._metadict, sort_keys=True),
         }
         serialised = json.dumps(data, sort_keys=True)
         return sha256(serialised.encode()).hexdigest()
+
+    @property
+    def _configdict(self) -> dict:
+        return self.config.to_dict()
+
+    @property
+    def _metadict(self) -> dict:
+        # Ensure meta is always a dict of LVMTileMeta
+        print(self.tiles.meta)
+        if isinstance(self.tiles, LVMTile):
+            meta = {self.tiles.meta.exp_num: self.tiles.meta}
+        else:
+            meta = self.tiles.meta
+
+        for key, value in meta.items():
+            meta[key] = asdict(value)
+
+        return meta
