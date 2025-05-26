@@ -7,8 +7,20 @@ from dataclasses import dataclass
 from typing import Callable
 
 import jax.numpy as jnp
+import numpy as np
+from jax.numpy import pi as π
 from jaxtyping import Array as JaxArray
+from modelling_lib.model.data import SpatialData
 from xarray import DataArray, Dataset
+
+
+def to_π_domain(x):
+    # return x * 2 * π - π
+    return x * 2 * np.pi - np.pi
+
+
+def from_π_domain(x):
+    return (x + π) / (2 * π)
 
 
 def to_jax_array(arr: DataArray) -> JaxArray:
@@ -25,29 +37,59 @@ class FitData:
     normalise_ivar: Callable
     predict_ivar: Callable
     normalise_α: Callable
-    predict_α: Callable
+    _predict_α: Callable
     normalise_δ: Callable
-    predict_δ: Callable
+    _predict_δ: Callable
 
     @property
-    def flux(self) -> JaxArray:
+    def _flux(self) -> JaxArray:
         return self.normalise_flux(to_jax_array(self.processed_data["flux"].values))
 
     @property
-    def i_var(self) -> JaxArray:
+    def flux(self) -> JaxArray:
+        return jnp.nan_to_num(self._flux)
+
+    @property
+    def _i_var(self) -> JaxArray:
         return self.normalise_ivar(to_jax_array(self.processed_data["i_var"].values))
 
     @property
+    def i_var(self) -> JaxArray:
+        return jnp.nan_to_num(self._i_var, nan=1e-4)
+
+    @property
+    def _u_flux(self) -> JaxArray:
+        return self._i_var**-0.5
+
+    @property
+    def u_flux(self) -> JaxArray:
+        return jnp.nan_to_num(self._u_flux, nan=1e2)
+
+    @property
     def α(self) -> JaxArray:
-        return self.normalise_α(to_jax_array(self.processed_data["ra"].values))
+        return to_π_domain(self.normalise_α(to_jax_array(self.processed_data["ra"].values)))
 
     @property
     def δ(self) -> JaxArray:
-        return self.normalise_δ(to_jax_array(self.processed_data["dec"].values))
+        return to_π_domain(self.normalise_δ(to_jax_array(self.processed_data["dec"].values)))
+
+    def predict_α(self, x: JaxArray) -> JaxArray:
+        return self._predict_α(from_π_domain(x))
+
+    def predict_δ(self, x: JaxArray) -> JaxArray:
+        return self._predict_δ(from_π_domain(x))
+
+    @property
+    def αδ_data(self) -> SpatialData:
+        return SpatialData(self.α, self.δ, jnp.arange(len(self.α)))
 
     @property
     def λ(self) -> JaxArray:
         return to_jax_array(self.processed_data["wavelength"].values)
+
+    @property
+    def mask(self) -> JaxArray:
+        return ~jnp.isnan(self._flux)
 
     def __repr__(self):
         # TODO: add something here
