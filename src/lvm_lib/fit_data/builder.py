@@ -40,7 +40,6 @@ class FitDataBuilder:
     @property
     def _metadict(self) -> dict:
         # Ensure meta is always a dict of LVMTileMeta
-        print(self.tiles.meta)
         if isinstance(self.tiles, LVMTile):
             meta = {self.tiles.meta.exp_num: self.tiles.meta}
         else:
