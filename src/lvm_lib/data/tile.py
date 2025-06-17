@@ -15,7 +15,13 @@ from astropy.units import Unit  # type: ignore[import]
 from numpy.typing import NDArray
 from xarray import Dataset, concat
 
-from lvm_lib.data.helper import daskify_native, numpyfy_native, summarize_with_units
+from lvm_lib.data.coordinates import get_mjd
+from lvm_lib.data.helper import (
+    convert_sci_to_int,
+    daskify_native,
+    numpyfy_native,
+    summarize_with_units,
+)
 
 # Conversions between FWHM and Gaussian sigma
 SIGMA_TO_FWHM: float = 2.0 * np.sqrt(2.0 * np.log(2))
@@ -54,8 +60,8 @@ class LVMTile:
             raise FileNotFoundError("Could not find DRP file.")
 
         with fits.open(file, memmap=True) as hdul:
-            tile_id, exp_num, drp_ver = cls.get_metadata(hdul)
-            (flux, i_var, mask, lsf), (wave, ra, dec, fibre_id, fibre_status) = (
+            tile_id, exp_num, drp_ver, mjd = cls.get_metadata(hdul)
+            (flux, i_var, mask, lsf), (wave, ra, dec, fibre_id, fibre_status, ifu_label) = (
                 cls.get_science_data(hdul)
             )
 
@@ -80,9 +86,11 @@ class LVMTile:
                 "spaxel": ("spaxel", np.arange(len(fibre_id))),
                 "wavelength": ("wavelength", wave, {"units": str(SPECTRAL_UNIT)}),
                 # More coordinates
+                "mjd": ("tile", [mjd], {"units": "day"}),
                 "ra": (spaxel_dims, ra[None, :], {"units": str(SPATIAL_UNIT)}),
                 "dec": (spaxel_dims, dec[None, :], {"units": str(SPATIAL_UNIT)}),
                 "fibre_id": (spaxel_dims, fibre_id[None, :]),
+                "ifu_label": (spaxel_dims, ifu_label[None, :]),
                 "fibre_status": (spaxel_dims, fibre_status[None, :]),
             },
         )
@@ -120,7 +128,10 @@ class LVMTile:
         dec: NDArray = numpyfy_native((slitmap["dec"])[science_inds])
         fibre_id: NDArray = numpyfy_native((slitmap["fiberid"])[science_inds])
         fibre_status: NDArray = numpyfy_native((slitmap["fibstatus"])[science_inds])
-        return (flux, i_var, mask, lsf), (wave, ra, dec, fibre_id, fibre_status)
+        ifu_label: NDArray = convert_sci_to_int(
+            numpyfy_native((slitmap["ifulabel"])[science_inds])
+        )
+        return (flux, i_var, mask, lsf), (wave, ra, dec, fibre_id, fibre_status, ifu_label)
 
     @staticmethod
     def get_metadata(drp_hdulist: HDUList) -> tuple[int, int, str]:
@@ -133,7 +144,8 @@ class LVMTile:
                 tile_id = str(drp_hdulist[0].header["OBJECT"])
         exp_num = int(drp_hdulist[0].header["EXPOSURE"])
         drp_ver = str(drp_hdulist[0].header["DRPVER"])
-        return tile_id, exp_num, drp_ver
+        mjd = float(get_mjd(drp_hdulist[0].header))
+        return tile_id, exp_num, drp_ver, mjd
 
 
 @dataclass(frozen=True)

@@ -2,7 +2,7 @@
 
 import dask.array as da
 import numpy as np
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 from xarray import Dataset
 
 
@@ -14,7 +14,7 @@ def daskify_native(array: ArrayLike, chunks: str | int | tuple) -> da.Array:
     return da.from_array(arr, chunks)  # type: ignore[no-any-return]
 
 
-def numpyfy_native(array: ArrayLike) -> np.ndarray:
+def numpyfy_native(array: ArrayLike) -> NDArray:
     """Convert input to a NumPy array with native byte order."""
     arr = np.asarray(array)
     if arr.dtype.byteorder not in ("=", "|"):
@@ -49,3 +49,8 @@ def summarize_with_units(ds: Dataset) -> str:
         lines.append(f"        {name:<13} {dims:<28} {dtype:<8} {size:<6} {chunks} [{units}]")
 
     return "\n".join(lines)
+
+
+def convert_sci_to_int(arr: ArrayLike) -> NDArray:
+    mapping = {"Sci1": 0, "Sci2": 1, "Sci3": 2}
+    return np.array([mapping[item] for item in arr], dtype=int)
