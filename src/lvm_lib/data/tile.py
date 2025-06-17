@@ -128,9 +128,7 @@ class LVMTile:
         dec: NDArray = numpyfy_native((slitmap["dec"])[science_inds])
         fibre_id: NDArray = numpyfy_native((slitmap["fiberid"])[science_inds])
         fibre_status: NDArray = numpyfy_native((slitmap["fibstatus"])[science_inds])
-        ifu_label: NDArray = convert_sci_to_int(
-            numpyfy_native((slitmap["ifulabel"])[science_inds])
-        )
+        ifu_label: NDArray = numpyfy_native((slitmap["ifulabel"])[science_inds])
         return (flux, i_var, mask, lsf), (wave, ra, dec, fibre_id, fibre_status, ifu_label)
 
     @staticmethod

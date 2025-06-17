@@ -114,7 +114,8 @@ class FitData:
 
     @property
     def ifu_idx(self) -> JaxArray:
-        return to_jax_array(self.processed_data["ifu_label"].values, dtype=np.int64)
+        ifu = self.processed_data["ifu_label"].values
+        return to_jax_array(np.unique(ifu, return_inverse=True)[1], dtype=np.int64)
 
     def __repr__(self):
         # TODO: add something here
