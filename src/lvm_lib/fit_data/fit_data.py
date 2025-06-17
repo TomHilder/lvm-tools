@@ -10,7 +10,7 @@ import jax.numpy as jnp
 import numpy as np
 from jax.numpy import pi as π
 from jaxtyping import Array as JaxArray
-from modelling_lib.model.data import SpatialData
+from modelling_lib.model.data import SpatialDataLVM
 from xarray import DataArray, Dataset
 
 
@@ -80,8 +80,8 @@ class FitData:
         return self._predict_δ(from_π_domain(x))
 
     @property
-    def αδ_data(self) -> SpatialData:
-        return SpatialData(self.α, self.δ, jnp.arange(len(self.α)))
+    def αδ_data(self) -> SpatialDataLVM:
+        return SpatialDataLVM(self.α, self.δ, self.spaxel_idx, self.tile_idx, self.ifu_idx)
 
     @property
     def λ(self) -> JaxArray:
