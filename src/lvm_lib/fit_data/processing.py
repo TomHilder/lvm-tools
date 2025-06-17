@@ -76,5 +76,4 @@ def get_normalisation_functions(
 
 def flatten_tile_coord(ds: Dataset) -> Dataset:
     """Flatten the tile and spaxel coordinates into a single coordinate."""
-    flattened = ds.stack(flat_spaxel=("tile", "spaxel")).reset_index("flat_spaxel")
-    return flattened.drop_vars("tile")
+    return ds.stack(flat_spaxel=("tile", "spaxel")).reset_index("flat_spaxel")

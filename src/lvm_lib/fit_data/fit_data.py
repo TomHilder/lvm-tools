@@ -23,10 +23,10 @@ def from_π_domain(x):
     return (x + π) / (2 * π)
 
 
-def to_jax_array(arr: DataArray) -> JaxArray:
+def to_jax_array(arr: DataArray, dtype=np.float64) -> JaxArray:
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=UserWarning)
-        return jnp.array(arr, dtype=jnp.float64)
+        return jnp.array(arr, dtype=dtype)
 
 
 @dataclass(frozen=True)
@@ -92,8 +92,29 @@ class FitData:
         return to_jax_array(self.processed_data["lsf_sigma"].values)
 
     @property
+    def mjd(self) -> JaxArray:
+        return to_jax_array(self.processed_data["mjd"].values)
+
+    @property
     def mask(self) -> JaxArray:
         return ~jnp.isnan(self._flux)
+
+    @property
+    def λ_idx(self) -> JaxArray:
+        return jnp.arange(len(self.λ), dtype=np.int64)
+
+    @property
+    def spaxel_idx(self) -> JaxArray:
+        return jnp.arange(len(self.α), dtype=np.int64)
+
+    @property
+    def tile_idx(self) -> JaxArray:
+        tile = to_jax_array(self.processed_data["tile"].values, dtype=np.int64)
+        return jnp.unique(tile, return_inverse=True)[1]
+
+    @property
+    def ifu_idx(self) -> JaxArray:
+        return to_jax_array(self.processed_data["ifu_label"].values, dtype=np.int64)
 
     def __repr__(self):
         # TODO: add something here
