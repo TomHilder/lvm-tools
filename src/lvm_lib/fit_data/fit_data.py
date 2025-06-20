@@ -13,6 +13,8 @@ from jaxtyping import Array as JaxArray
 from modelling_lib.model.data import SpatialDataLVM
 from xarray import DataArray, Dataset
 
+from lvm_lib.physical_properties.barycentric_corr import get_v_barycentric
+
 
 def to_π_domain(x):
     # return x * 2 * π - π
@@ -116,6 +118,17 @@ class FitData:
     def ifu_idx(self) -> JaxArray:
         ifu = self.processed_data["ifu_label"].values
         return to_jax_array(np.unique(ifu, return_inverse=True)[1], dtype=np.int64)
+
+    @property
+    def v_bary(self) -> JaxArray:
+        return to_jax_array(
+            get_v_barycentric(
+                mjd=self.mjd,
+                α=self.predict_α(self.α),
+                δ=self.predict_δ(self.δ),
+                unit="km/s",
+            )
+        )
 
     def __repr__(self):
         # TODO: add something here
