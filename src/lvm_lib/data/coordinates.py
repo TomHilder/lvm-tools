@@ -14,6 +14,10 @@ def get_mjd(header: Header) -> float:
         start_time = Time(header["INTSTART"], format="isot")
         end_time = Time(header["INTEND"], format="isot")
         mid_time = start_time + (end_time - start_time) / 2
+        # print(header["MJD"])
+        # mid_time = Time(header["MJD"], format="mjd")
+        # print(mid_time.mjd)
+        # print()
 
         # Validation: check against header EXPTIME
         # calculated_exptime = (end_time - start_time).to(u.second).value
@@ -25,21 +29,21 @@ def get_mjd(header: Header) -> float:
 
         return mid_time.mjd
 
-    # Method 2: Use OBSTIME + EXPTIME/2 as fallback
-    elif "OBSTIME" in header and "EXPTIME" in header:
-        start_time = Time(header["OBSTIME"], format="isot")
-        exptime = header["EXPTIME"] * u.second
-        mid_time = start_time + exptime / 2
+    # # Method 2: Use OBSTIME + EXPTIME/2 as fallback
+    # elif "OBSTIME" in header and "EXPTIME" in header:
+    #     start_time = Time(header["OBSTIME"], format="isot")
+    #     exptime = header["EXPTIME"] * u.second
+    #     mid_time = start_time + exptime / 2
 
-        return mid_time.mjd
+    #     return mid_time.mjd
 
-    # Method 3: Use header MJD + EXPTIME/2 (least precise, integer MJD)
-    elif "MJD" in header and "EXPTIME" in header:
-        mjd_start = header["MJD"]  # This appears to be integer MJD
-        exptime_days = header["EXPTIME"] / 86400.0  # Convert seconds to days
-        mjd_mid = mjd_start + exptime_days / 2
+    # # Method 3: Use header MJD + EXPTIME/2 (least precise, integer MJD)
+    # elif "MJD" in header and "EXPTIME" in header:
+    #     mjd_start = header["MJD"]  # This appears to be integer MJD
+    #     exptime_days = header["EXPTIME"] / 86400.0  # Convert seconds to days
+    #     mjd_mid = mjd_start + exptime_days / 2
 
-        return mjd_mid
+    #     return mjd_mid
 
     else:
         raise ValueError("Could not find sufficient time information in header")
