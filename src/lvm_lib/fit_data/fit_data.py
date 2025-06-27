@@ -90,8 +90,13 @@ class FitData:
         return to_jax_array(self.processed_data["wavelength"].values)
 
     @property
-    def lsf_σ(self) -> JaxArray:
+    def _lsf_σ(self) -> JaxArray:
         return to_jax_array(self.processed_data["lsf_sigma"].values)
+
+    @property
+    def lsf_σ(self) -> JaxArray:
+        median_lsf_σ = jnp.nanmedian(self._lsf_σ)
+        return jnp.nan_to_num(self._lsf_σ, nan=median_lsf_σ)
 
     @property
     def mjd(self) -> JaxArray:
