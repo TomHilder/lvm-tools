@@ -33,7 +33,7 @@ def calc_normalisation(data: ArrayLike, strategy: NormaliseStrategy) -> tuple[fl
         scale = (1 + 2 * NORM_PADDING) * data_range
     else:
         raise ValueError(f"Unknown normalisation strategy: {strategy}")
-    return offset, scale
+    return float(offset), float(scale)
 
 
 def normalise(data: ArrayLike, offset: float, scale: float) -> ArrayLike:

@@ -126,6 +126,8 @@ class DataConfig:
 
     @staticmethod
     def from_dict(config: dict) -> DataConfig:
+        print(config["λ_range"])
+        print("=================")
         if len(config) != len(DataConfig.default().to_dict()):
             raise ValueError("config has the wrong number of entries.")
         return DataConfig(**config)

@@ -9,8 +9,8 @@ from lvm_lib.fit_data.normalisation import NormaliseStrategy
 
 
 def validate_range(x_range: tuple[float, float]) -> None:
-    if not isinstance(x_range, tuple):
-        raise TypeError("Data range must be in a tuple.")
+    # if not isinstance(x_range, tuple):
+    # raise TypeError("Data range must be in a tuple.")
     if len(x_range) != 2:
         raise ValueError("Data range must be a tuple with exactly two values (min, max).")
     if x_range[1] < x_range[0]:
@@ -28,8 +28,8 @@ def validate_norm_strategy(strategy: NormaliseStrategy) -> None:
 
 
 def validate_fib_status_incl(fibre_status_include: tuple[FibreStatus]) -> None:
-    if not isinstance(fibre_status_include, tuple):
-        raise TypeError("fibre_status_include must be a tuple.")
+    # if not isinstance(fibre_status_include, tuple):
+    # raise TypeError("fibre_status_include must be a tuple.")
     for fs in fibre_status_include:
         if fs not in get_args(FibreStatus):
             raise ValueError(f"Unknown fibre status: {fs}")
