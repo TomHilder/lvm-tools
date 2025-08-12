@@ -4,10 +4,10 @@ import json
 from dataclasses import asdict, dataclass
 from hashlib import sha256
 
-from lvm_lib.config.data_config import DataConfig
-from lvm_lib.data.tile import LVMTile, LVMTileLike
-from lvm_lib.fit_data.fit_data import FitData
-from lvm_lib.fit_data.processing import (
+from lvm_tools.config.data_config import DataConfig
+from lvm_tools.data.tile import LVMTile, LVMTileLike
+from lvm_tools.fit_data.fit_data import FitData
+from lvm_tools.fit_data.processing import (
     flatten_tile_coord,
     get_normalisation_functions,
     process_tile_data,

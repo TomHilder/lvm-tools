@@ -1,4 +1,4 @@
-"""fit_data.py - FitData classm for holding data ready to be fitted."""
+"""fit_data.py - FitData class for holding data ready to be fitted."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from jaxtyping import Array as JaxArray
 from modelling_lib.model.data import SpatialDataLVM
 from xarray import DataArray, Dataset
 
-from lvm_lib.physical_properties.barycentric_corr import get_v_barycentric
+from lvm_tools.physical_properties.barycentric_corr import get_v_barycentric
 
 
 def to_π_domain(x):

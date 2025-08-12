@@ -6,7 +6,7 @@ from dataclasses import asdict, dataclass
 
 import numpy as np
 
-from lvm_lib.config.validation import (
+from lvm_tools.config.validation import (
     validate_apply_mask,
     validate_excl_strategy,
     validate_fib_status_incl,
@@ -15,10 +15,14 @@ from lvm_lib.config.validation import (
     validate_range,
     validate_scale,
 )
-from lvm_lib.data.tile import LVMTileLike
-from lvm_lib.fit_data.filtering import BAD_FLUX_THRESHOLD, ExcludeStrategy, FibreStatus
-from lvm_lib.fit_data.normalisation import NormaliseStrategy
-from lvm_lib.fit_data.processing import get_normalisations, get_αδ_ranges, process_tile_data
+from lvm_tools.data.tile import LVMTileLike
+from lvm_tools.fit_data.filtering import (
+    BAD_FLUX_THRESHOLD,
+    ExcludeStrategy,
+    FibreStatus,
+)
+from lvm_tools.fit_data.normalisation import NormaliseStrategy
+from lvm_tools.fit_data.processing import get_normalisations, get_αδ_ranges, process_tile_data
 
 
 @dataclass(frozen=True)
@@ -89,7 +93,9 @@ class DataConfig:
 
     @staticmethod
     def from_tiles(
-        tiles: LVMTileLike, λ_range: tuple[float, float] = (-np.inf, np.inf), **overrides
+        tiles: LVMTileLike,
+        λ_range: tuple[float, float] = (-np.inf, np.inf),
+        **overrides,
     ) -> DataConfig:
         # λ_range cannot be set automatically
         α_range, δ_range = get_αδ_ranges(tiles)

@@ -15,13 +15,8 @@ from astropy.units import Unit  # type: ignore[import]
 from numpy.typing import NDArray
 from xarray import Dataset, concat
 
-from lvm_lib.data.coordinates import get_mjd
-from lvm_lib.data.helper import (
-    convert_sci_to_int,
-    daskify_native,
-    numpyfy_native,
-    summarize_with_units,
-)
+from lvm_tools.data.coordinates import get_mjd
+from lvm_tools.data.helper import daskify_native, numpyfy_native, summarize_with_units
 
 # Conversions between FWHM and Gaussian sigma
 SIGMA_TO_FWHM: float = 2.0 * np.sqrt(2.0 * np.log(2))

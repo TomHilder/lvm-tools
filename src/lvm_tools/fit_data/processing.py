@@ -8,11 +8,11 @@ from typing import TYPE_CHECKING, Callable
 from xarray import Dataset
 
 if TYPE_CHECKING:
-    from lvm_lib.config.data_config import DataConfig
-from lvm_lib.data.tile import LVMTileLike
-from lvm_lib.fit_data.clipping import bounding_square, clip_dataset
-from lvm_lib.fit_data.filtering import filter_dataset
-from lvm_lib.fit_data.normalisation import calc_normalisation, get_norm_funcs
+    from lvm_tools.config.data_config import DataConfig
+from lvm_tools.data.tile import LVMTileLike
+from lvm_tools.fit_data.clipping import bounding_square, clip_dataset
+from lvm_tools.fit_data.filtering import filter_dataset
+from lvm_tools.fit_data.normalisation import calc_normalisation, get_norm_funcs
 
 
 def clip_data(tile_data: Dataset, config: DataConfig) -> Dataset:

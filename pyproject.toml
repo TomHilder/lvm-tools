@@ -1,14 +1,34 @@
 [project]
-name = "lvm-lib"
-version = "0.1.0"
-description = "Add your description here"
+name = "lvm_tools"
+dynamic = ["version"]
+description = "Lazily read/encapsulate LVM DRP data in a modular way"
 readme = "README.md"
-authors = [
-    { name = "Tom Hilder", email = "tom.hilder.dlhp@gmail.com" }
-]
+authors = [{ name = "Tom Hilder", email = "thomas.hilder@monash.edu" }]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "astropy>=7.1.0",
+    "dask>=2025.7.0",
+    "numpy>=2.3.2",
+    "scipy>=1.16.1",
+    "xarray>=2025.7.1",
+]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 99 # Sorry PEP8 I'm a rebel
+
+[tool.hatch.build]
+include = ["src/lvm_tools/py.typed"]
+exclude = ["**/__pycache__/**"]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.sdist]
+include = ["src/**", "README.md", "LICENSE"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lvm_tools"]

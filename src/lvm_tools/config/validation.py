@@ -4,15 +4,17 @@ from typing import get_args
 
 import numpy as np
 
-from lvm_lib.fit_data.filtering import ExcludeStrategy, FibreStatus
-from lvm_lib.fit_data.normalisation import NormaliseStrategy
+from lvm_tools.fit_data.filtering import ExcludeStrategy, FibreStatus
+from lvm_tools.fit_data.normalisation import NormaliseStrategy
 
 
 def validate_range(x_range: tuple[float, float]) -> None:
     # if not isinstance(x_range, tuple):
     # raise TypeError("Data range must be in a tuple.")
     if len(x_range) != 2:
-        raise ValueError("Data range must be a tuple with exactly two values (min, max).")
+        raise ValueError(
+            "Data range must be a tuple with exactly two values (min, max)."
+        )
     if x_range[1] < x_range[0]:
         raise ValueError("Requested data range restriction has max < min.")
 
