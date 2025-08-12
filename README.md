@@ -1,8 +1,10 @@
-# lvm_lib
+# lvm_tools
 
-The point of this library is to contain the objects that will wrap the LVM data and other LVM specific stuff like line data probably.
+Lightweight wrapper of LVM DRP data with an emphasis on modularity. Allows for lazy reading via dask, especially useful for fitting large models. Designed for use with spectrospatial models via [spectracles](https://github.com/TomHilder/spectracles) but probably useful for other things too.
 
-TODO:
+Feel free to contact me personally if you have any questions at all.
+
+## TODO
 
 - [ ] repr for FitData
 - [ ] Logging/hashing
