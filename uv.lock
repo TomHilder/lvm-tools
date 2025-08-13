@@ -345,7 +345,7 @@ spectracles = [
 requires-dist = [
     { name = "astropy", specifier = ">=7.1.0" },
     { name = "dask", specifier = ">=2025.7.0" },
-    { name = "jax", extras = ["cpu"], specifier = ">=0.7.0" },
+    { name = "jax", specifier = ">=0.7.0" },
     { name = "numpy", specifier = ">=2.3.2" },
     { name = "scipy", specifier = ">=1.16.1" },
     { name = "spectracles", marker = "extra == 'spectracles'", specifier = ">=0.5.1" },
