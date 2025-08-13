@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
 import jax.numpy as jnp
 import numpy as np
@@ -14,10 +14,25 @@ from xarray import DataArray, Dataset
 
 from lvm_tools.physical_properties.barycentric_corr import get_v_barycentric
 
+if TYPE_CHECKING:
+    from spectracles.model.data import SpatialDataLVM
+
 try:
     from spectracles.model.data import SpatialDataLVM
-except ImportError:
-    warnings.warn("Could not import SpatialDataLVM from spectracles.model.data", ImportWarning)
+except Exception as e:
+    _import_err = e
+    msg = (
+        "Could not import SpatialDataLVM from spectracles.model.data. "
+        "Install the optional dependency: pip install spectracles"
+    )
+
+    class SpatialDataLVM:  # stub preserves the API shape
+        def __init__(self, *args, **kwargs):
+            raise ModuleNotFoundError(msg) from _import_err
+
+    import warnings
+
+    warnings.warn(msg, ImportWarning)
 
 
 def to_π_domain(x):
