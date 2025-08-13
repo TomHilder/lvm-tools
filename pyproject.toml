@@ -33,8 +33,5 @@ version-file = "src/lvm_tools/_version.py"
 [tool.hatch.version]
 source = "vcs"
 
-[tool.hatch.version.raw-options]
-local_scheme = "no-local-version"
-
 [tool.ruff]
 line-length = 99 # Sorry PEP8 I'm a rebel
