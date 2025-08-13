@@ -9,12 +9,12 @@ from typing import TYPE_CHECKING, Callable
 import jax.numpy as jnp
 import numpy as np
 from jax.numpy import pi as π
-from jaxtyping import Array as JaxArray
 from xarray import DataArray, Dataset
 
 from lvm_tools.physical_properties.barycentric_corr import get_v_barycentric
 
 if TYPE_CHECKING:
+    from jaxtyping import Array as JaxArray
     from spectracles.model.data import SpatialDataLVM
 
 try:
