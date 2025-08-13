@@ -6,7 +6,25 @@ Feel free to contact me personally if you have any questions at all.
 
 ## Installation
 
-TODO
+Easiest is from PyPI either with `pip`
+
+```sh
+pip install lvm-tools
+```
+
+or `uv` (recommended)
+
+```sh
+uv add lvm-tools
+```
+
+Or, you can clone and build from source
+
+```sh
+git clone git@github.com:TomHilder/lvm_tools.git
+cd lvm_tools
+pip install -e .
+```
 
 ## Usage
 
