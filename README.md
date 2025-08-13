@@ -22,7 +22,9 @@ TODO
 
 ## TODO
 
+- [ ] Relax version requirements from being strictly my environment (which is very up-to-date)
 - [ ] repr for FitData
 - [ ] Logging/hashing
 - [ ] Cache
 - [ ] OptConfig
+- [ ] Testing ?
