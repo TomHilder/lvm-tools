@@ -3,7 +3,7 @@ name = "lvm_tools"
 dynamic = ["version"]
 description = "Lazily read/encapsulate LVM DRP data in a modular way"
 readme = "README.md"
-authors = [{ name = "Tom Hilder", email = "thomas.hilder@monash.edu" }]
+authors = [{ name = "Tom Hilder", email = "Thomas.Hilder@monash.edu" }]
 requires-python = ">=3.13"
 dependencies = [
     "astropy>=7.1.0",
@@ -17,18 +17,24 @@ dependencies = [
 requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
-[tool.ruff]
-line-length = 99 # Sorry PEP8 I'm a rebel
-
 [tool.hatch.build]
 include = ["src/lvm_tools/py.typed"]
 exclude = ["**/__pycache__/**"]
-
-[tool.hatch.version]
-source = "vcs"
 
 [tool.hatch.build.targets.sdist]
 include = ["src/**", "README.md", "LICENSE"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/lvm_tools"]
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/lvm_tools/_version.py"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
+local_scheme = "no-local-version"
+
+[tool.ruff]
+line-length = 99 # Sorry PEP8 I'm a rebel
