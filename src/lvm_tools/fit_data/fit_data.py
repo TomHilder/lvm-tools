@@ -10,10 +10,14 @@ import jax.numpy as jnp
 import numpy as np
 from jax.numpy import pi as π
 from jaxtyping import Array as JaxArray
-from modelling_lib.model.data import SpatialDataLVM
 from xarray import DataArray, Dataset
 
 from lvm_tools.physical_properties.barycentric_corr import get_v_barycentric
+
+try:
+    from spectracles.model.data import SpatialDataLVM
+except ImportError:
+    warnings.warn("Could not import SpatialDataLVM from spectracles.model.data", ImportWarning)
 
 
 def to_π_domain(x):
